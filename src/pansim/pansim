@@ -1,0 +1,20 @@
+#!python
+import os
+import toml
+import libpansim
+from matplotlib import pyplot as plt
+
+
+def parse_config(file_name):
+    if not os.path.isfile(file_name):
+        raise ValueError('The given file does not exist:', file_name)
+    return toml.load(file_name)
+
+
+if __name__ == "__main__":
+    infections, deaths, recoveries = libpansim.run(None)
+    plt.plot(infections)
+    plt.plot(deaths)
+    plt.plot(recoveries)
+    plt.plot([i - d - r for (i, d, r) in zip(infections, deaths, recoveries)])
+    plt.show()
