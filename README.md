@@ -25,6 +25,23 @@ This project include two parts.
 
 The recommended backend was written in Rust. You can find it in `src/pansim`. 
 
+### Demo
+
+Here you can see three different scenarios. You can find more details in `demo/`.
+
+![A fast spreading pandemic](demo/fast.png)
+![A slow spreading pandemic](demo/slow.png)
+![An unsustained pandemic](demo/unsustained.png)
+
+Keep an eye on the value on the axis. 
+You can see that the fast pandemic is indeed faster - in regards to start and end.
+Additionally it's obvious that the infection rate starts to escalate as soon as the hospitals are overfull.
+
+The slow pandemic does not reach that limit and is thus relatively contained.
+
+The unsustained pandemic can't take off. 
+It dies way quicker than the slow pandemic and does not reach more than a few hundred total infections.
+
 ### Dependencies 
 
 - Rust
