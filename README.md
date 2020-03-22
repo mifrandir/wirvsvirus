@@ -78,11 +78,10 @@ You can change the settings in `src/pansim/Config.toml` to your liking but all s
 
 ### TODO
 
-- cross-city transfers
 - behaviour changes
-- quarantine
-- health service
 - apparent statistics
+- unit and integration testing
+- exposing usable public api
 
 ## Frontend (PANdemic VISualization)
 
