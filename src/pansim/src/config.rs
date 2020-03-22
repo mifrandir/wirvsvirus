@@ -1,9 +1,9 @@
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use std::error::Error;
 use std::fs;
 use toml;
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
     pub save_to_file: bool,
     pub population: Population,
@@ -19,7 +19,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Virus {
     pub contagiousness: f32,
     pub contagious_for: i32,
@@ -30,7 +30,7 @@ pub struct Virus {
     pub treatment_quarantine_efficiency: f32,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Population {
     pub size: u32,
     pub age_distribution: [f32; 10],

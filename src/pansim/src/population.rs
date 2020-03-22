@@ -186,13 +186,16 @@ impl Society {
             }
         }
     }
+    pub fn active(&self) -> u32 {
+        self.infections - self.deaths - self.recoveries
+    }
     pub fn to_string(&self) -> String {
         format!(
             "{},{},{},{},{},{},{}",
             self.infections,
             self.deaths,
             self.recoveries,
-            self.infections - self.deaths - self.recoveries,
+            self.active(),
             self.new_infections,
             self.in_treatment(),
             self.in_treatmet_queue(),
@@ -354,9 +357,9 @@ impl City {
 
     fn handle_infection(&mut self, a: usize, sx: Option<&mpsc::Sender<Event>>) {
         if self.people[a].infect(&self.config, sx) {
-            if self.infections == 0 {
-                eprintln!("First infected in new city");
-            }
+            //if self.infections == 0 {
+            //    eprintln!("First infected in new city");
+            //}
             self.infections += 1;
             self.hospital_queue.push_back(a);
         }
@@ -627,7 +630,7 @@ impl Person {
         }
         self.infected_for = Some(inf);
         if let Some(t) = self.in_treatment_for {
-            self.in_treatment_for = Some(t+1);
+            self.in_treatment_for = Some(t + 1);
         }
         if self.recovered || self.dead {
             return;

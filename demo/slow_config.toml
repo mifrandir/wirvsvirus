@@ -1,0 +1,44 @@
+save_to_file = true
+
+[population]
+size = 200000
+age_distribution = [
+    0.08,
+    0.09,
+    0.1,
+    0.1,
+    0.13,
+    0.2,
+    0.1,
+    0.1,
+    0.08,
+    0.02,
+]
+city_size = 20000
+district_size = 5000
+household_size = 10
+mean_household_mobility = 0.3
+mean_district_mobility = 0.2
+mean_city_mobility = 0.1
+mean_national_mobility = 0.02
+city_medical_capacity = 10000
+
+[virus]
+contagiousness = 1.0
+contagious_for = 14
+sick_for = 14
+lethality = [
+    0.002,
+    0.002,
+    0.002,
+    0.004,
+    0.013,
+    0.036,
+    0.08,
+    0.148,
+    0.148,
+    0.148,
+]
+treatment_decay = 0.3
+treatment_efficiency = 0.7
+treatment_quarantine_efficiency = 0.9
