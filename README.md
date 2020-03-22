@@ -1,4 +1,4 @@
-# Wir VS Virus
+# #WirvsVirus
 Our repository for the German [WirVsVirus hackathon](https://wirvsvirushackathon.org).
 
 To install this, run
