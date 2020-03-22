@@ -1,5 +1,5 @@
 # Wir VS Virus
-My repository for the German [WirVsVirus hackathon](https://wirvsvirushackathon.org).
+Our repository for the German [WirVsVirus hackathon](https://wirvsvirushackathon.org).
 
 To install this, run
 ```
