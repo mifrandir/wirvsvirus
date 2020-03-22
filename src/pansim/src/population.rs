@@ -2,7 +2,7 @@ use super::*;
 use rand;
 use rand::seq::SliceRandom;
 use rand::Rng;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -16,6 +16,7 @@ pub struct Society {
     deaths: u32,
     recoveries: u32,
     infections: u32,
+    new_infections: u32,
 }
 
 #[derive(Debug)]
@@ -94,6 +95,7 @@ impl Society {
         );
         eprintln!("Built society in {}s", begin.elapsed().as_secs_f32());
         Society {
+            new_infections: 0,
             config: cfg,
             cities: cities_unlocked,
             city_relations: city_relations,
@@ -107,8 +109,10 @@ impl Society {
         self.infections += 1;
     }
     pub fn next_day(&mut self) {
+        let before = self.infections;
         self.calculate_internal_change();
         self.calculate_national_infections();
+        self.new_infections = self.infections - before;
     }
 
     fn calculate_internal_change(&mut self) {
@@ -120,6 +124,7 @@ impl Society {
             handles.push(thread::spawn(move || {
                 let mut lock = (*c).lock().unwrap();
                 (*lock).next_day(Some(&sx));
+                (*lock).update_hosptials(Some(&sx));
                 (*lock).calculate_infections(Some(&sx));
             }));
         }
@@ -182,26 +187,52 @@ impl Society {
     }
     pub fn to_string(&self) -> String {
         format!(
-            "{},{},{},{}",
+            "{},{},{},{},{},{},{}",
             self.infections,
             self.deaths,
             self.recoveries,
             self.infections - self.deaths - self.recoveries,
+            self.new_infections,
+            self.in_treatment(),
+            self.in_treatmet_queue(),
         )
     }
     pub fn csv_header(&self) -> String {
-        format!("Infections,Deaths,Recoveries,Active")
+        format!("Infections,Deaths,Recoveries,Active,New Infections,Hospital,Hospital Queue")
+    }
+
+    fn in_treatment(&self) -> usize {
+        let mut total = 0;
+        for c in self.cities.iter() {
+            let lock = (*c).lock().unwrap();
+            total += (*lock).hospital.len();
+        }
+        total
+    }
+
+    fn in_treatmet_queue(&self) -> usize {
+        let mut total = 0;
+        for c in self.cities.iter() {
+            let lock = (*c).lock().unwrap();
+            total += (*lock).hospital_queue.len();
+        }
+        total
     }
 }
 
 #[derive(Debug)]
 pub struct City {
     infections: u32,
+    dead: u32,
+    recovered: u32,
+    active: u32,
     people: Vec<Person>,
     people_relations: HashMap<(u32, u32), u8>,
-    district_relations: Vec<Vec<u8>>,
-    household_relations: Vec<Vec<u8>>,
+    //district_relations: Vec<Vec<u8>>,
+    //household_relations: Vec<Vec<u8>>,
     config: Arc<Config>,
+    hospital: VecDeque<usize>,
+    hospital_queue: VecDeque<usize>,
 }
 impl City {
     pub fn new(cfg: Arc<Config>) -> Self {
@@ -222,7 +253,6 @@ impl City {
         }
         people.shuffle(&mut rand::thread_rng());
         let mut people_relations = HashMap::new();
-        let mut household_relations = Vec::new();
         let h_size = cfg.population.household_size;
         let h_no = size / h_size;
         for h in 0..h_no {
@@ -234,38 +264,45 @@ impl City {
                 }
             }
         }
-        let h_no = h_no as usize;
-        for _ in 0..h_no {
-            household_relations.push(vec![0; h_no]);
-        }
-        for i in 1..h_no as usize {
-            for j in 0..i {
-                let r = rand::random();
-                household_relations[i][j] = r;
-                household_relations[j][i] = r;
-            }
-        }
-        let mut district_relations = Vec::new();
-        let d_size = cfg.population.district_size;
-        let d_no = (size / d_size) as usize;
-        for _ in 0..d_no {
-            district_relations.push(vec![0; d_no]);
-        }
-        for i in 1..d_no as usize {
-            for j in 0..i {
-                let r = rand::random();
-                district_relations[i][j] = r;
-                district_relations[j][i] = r;
-            }
-        }
+        // TODO: Reintroduce those relations.
+        //let mut household_relations = Vec::new();
+        //let h_no = h_no as usize;
+        //for _ in 0..h_no {
+        //    household_relations.push(vec![0; h_no]);
+        //}
+        //for i in 1..h_no as usize {
+        //    for j in 0..i {
+        //        let r = rand::random();
+        //        household_relations[i][j] = r;
+        //        household_relations[j][i] = r;
+        //    }
+        //}
+        //let mut district_relations = Vec::new();
+        //let d_size = cfg.population.district_size;
+        //let d_no = (size / d_size) as usize;
+        //for _ in 0..d_no {
+        //    district_relations.push(vec![0; d_no]);
+        //}
+        //for i in 1..d_no as usize {
+        //    for j in 0..i {
+        //        let r = rand::random();
+        //        district_relations[i][j] = r;
+        //        district_relations[j][i] = r;
+        //    }
+        //}
         eprintln!("Built city in {}s", begin.elapsed().as_secs_f64());
         City {
             infections: 0,
+            active: 0,
+            dead: 0,
+            recovered: 0,
             people: people,
             people_relations: people_relations,
-            district_relations: district_relations,
-            household_relations: household_relations,
+            //district_relations: district_relations,
+            //household_relations: household_relations,
             config: cfg,
+            hospital: VecDeque::new(),
+            hospital_queue: VecDeque::new(),
         }
     }
 
@@ -273,6 +310,10 @@ impl City {
         let mut rng = rand::thread_rng();
         let mut mobile = Vec::new();
         for i in 0..self.people.len() {
+            // We don't allow people to leave the city if they are in quarantine...
+            if self.people[i].in_treatment {
+                continue;
+            }
             if rng.gen::<f32>() < self.config.population.mean_national_mobility {
                 mobile.push(i);
             }
@@ -316,6 +357,7 @@ impl City {
                 eprintln!("First infected in new city");
             }
             self.infections += 1;
+            self.hospital_queue.push_back(a);
         }
     }
 
@@ -323,12 +365,12 @@ impl City {
         if !self.is_relevant_encounter(a, b) {
             return;
         }
-        let r: u8 = rand::thread_rng().gen();
         let res;
         match self.people_relations.get(&(a as u32, b as u32)) {
             Some(v) => res = *v,
             None => panic!("Relation between {} and {} does not exist!", a, b),
         }
+        let r: u8 = rand::thread_rng().gen();
         if r < res {
             // In households we're doing 1:1 infections.
             // This is unlike the model in the bigger partitions where we're using pools.
@@ -343,7 +385,14 @@ impl City {
         for h in 0..h_no {
             let mut is_mobile = Vec::new();
             for i in 0..h_size {
-                let m = self.config.population.mean_household_mobility > rng.gen();
+                let real_mobility = self.config.population.mean_household_mobility * {
+                    if self.people[h * h_size + i].in_treatment {
+                        1.0 - self.config.virus.treatment_quarantine_efficiency
+                    } else {
+                        1.0
+                    }
+                };
+                let m = real_mobility > rng.gen();
                 is_mobile.push(m);
                 if !m {
                     continue;
@@ -367,7 +416,14 @@ impl City {
         for d in 0..d_no {
             let mut total_mobile = Vec::new();
             for i in 0..d_size {
-                if self.config.population.mean_district_mobility <= rng.gen() {
+                let real_mobility = self.config.population.mean_district_mobility * {
+                    if self.people[d * d_size + i].in_treatment {
+                        1.0 - self.config.virus.treatment_quarantine_efficiency
+                    } else {
+                        1.0
+                    }
+                };
+                if real_mobility <= rng.gen() {
                     continue;
                 }
                 total_mobile.push(i);
@@ -402,7 +458,14 @@ impl City {
         let c_size = self.config.population.city_size as usize;
         let mut total_mobile = Vec::new();
         for i in 0..c_size {
-            if self.config.population.mean_city_mobility <= rng.gen() {
+            let real_mobility = self.config.population.mean_city_mobility * {
+                if self.people[i].in_treatment {
+                    1.0 - self.config.virus.treatment_quarantine_efficiency
+                } else {
+                    1.0
+                }
+            };
+            if real_mobility <= rng.gen() {
                 continue;
             }
             total_mobile.push(i);
@@ -427,6 +490,24 @@ impl City {
                 continue;
             }
             ev_q.send(InternalEvent::Infection(*i)).unwrap();
+        }
+    }
+
+    fn update_hosptials(&mut self, _sx: Option<&mpsc::Sender<Event>>) {
+        while let Some(p) = self.hospital.front() {
+            if self.people[*p].recovered || self.people[*p].dead {
+                self.hospital.pop_front();
+            } else {
+                break;
+            }
+        }
+        while self.hospital.len() < self.config.population.city_medical_capacity {
+            if let Some(p) = self.hospital_queue.pop_front() {
+                self.hospital.push_back(p);
+                self.people[p].hospitalize(&self.config);
+            } else {
+                break;
+            }
         }
     }
 
@@ -455,11 +536,14 @@ impl City {
 #[derive(Debug)]
 pub struct Person {
     age: i8,
+    infected: bool,
     infected_for: Option<i32>,
     recovered: bool,
-    infected: bool,
-    doomed: bool,
+    doomed: Option<bool>,
+    severity: u8,
     dead: bool,
+    in_treatment: bool,
+    in_treatment_for: Option<i32>,
 }
 
 impl Person {
@@ -470,11 +554,14 @@ impl Person {
         }
         Person {
             age: age,
+            infected: false,
             infected_for: None,
             recovered: false,
-            infected: false,
-            doomed: false,
+            doomed: None,
+            severity: 0,
             dead: false,
+            in_treatment: false,
+            in_treatment_for: None,
         }
     }
 
@@ -492,15 +579,12 @@ impl Person {
         self.dead = true;
     }
 
-    fn doom(&mut self) {
-        self.doomed = true;
-    }
-
     fn infect(&mut self, cfg: &Config, sx: Option<&mpsc::Sender<Event>>) -> bool {
         if self.infected {
             return false;
         }
-        if rand::random::<f32>() >= cfg.virus.contagiousness {
+        let mut rng = rand::thread_rng();
+        if rng.gen::<f32>() >= cfg.virus.contagiousness {
             return false;
         }
         if let Some(s) = sx {
@@ -508,27 +592,54 @@ impl Person {
         }
         self.infected = true;
         self.infected_for = Some(0);
-        let r: f64 = rand::random();
-        if r < cfg.virus.lethality[self.age as usize] {
-            self.doom();
+        self.severity = rng.gen();
+        true
+    }
+
+    fn hospitalize(&mut self, _cfg: &Config) {
+        self.in_treatment = true;
+        self.in_treatment_for = Some(0);
+    }
+
+    fn is_doomed(&mut self, cfg: &Config) -> bool {
+        if let Some(b) = self.doomed {
+            return b;
         }
-        return true;
+        let t = if let Some(it) = self.in_treatment_for {
+            let inf = self.infected_for.unwrap() as f32;
+            let delay = inf - it as f32;
+            1.0 - cfg.virus.treatment_efficiency * (1.0 - cfg.virus.treatment_decay.powf(-delay))
+        } else {
+            1.0
+        };
+        let real_lethality = cfg.virus.lethality[self.age as usize] * t;
+        let b = self.severity as f32 > std::u8::MAX as f32 * (1.0 - real_lethality);
+        self.doomed = Some(b);
+        b
     }
 
     pub fn next_day(&mut self, cfg: &Config, sx: Option<&mpsc::Sender<Event>>) {
-        let time;
+        let inf;
         match self.infected_for {
             None => return,
-            Some(t) => time = t + 1,
+            Some(t) => inf = t + 1,
         }
-        self.infected_for = Some(time);
+        self.infected_for = Some(inf);
+        if let Some(t) = self.in_treatment_for {
+            self.in_treatment_for = Some(t+1);
+        }
         if self.recovered || self.dead {
             return;
         }
-        if time > cfg.virus.sick_for {
-            if self.doomed {
+        if inf > cfg.virus.sick_for {
+            if self.is_doomed(cfg) {
                 self.kill(sx);
             } else {
+                //eprintln!(
+                //    "Recovered with severity {} ({}%)",
+                //    self.severity,
+                //    100.0 * self.severity as f32 / std::u8::MAX as f32
+                //);
                 self.recover(sx);
             }
         }

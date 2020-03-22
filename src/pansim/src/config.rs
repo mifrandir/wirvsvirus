@@ -24,7 +24,10 @@ pub struct Virus {
     pub contagiousness: f32,
     pub contagious_for: i32,
     pub sick_for: i32,
-    pub lethality: [f64; 10],
+    pub lethality: [f32; 10],
+    pub treatment_decay: f32,
+    pub treatment_efficiency: f32,
+    pub treatment_quarantine_efficiency: f32,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -38,6 +41,7 @@ pub struct Population {
     pub mean_district_mobility: f32,
     pub mean_city_mobility: f32,
     pub mean_national_mobility: f32,
+    pub city_medical_capacity: usize,
 }
 
 impl Population {
