@@ -33,3 +33,14 @@ There are still many things to implement:
 - quarantine
 - health service
 - apparent statistics
+
+## Frontend (PanVis)
+
+The frontend was written in Javascript using Electron.
+
+You can find it in `src/panvis`. To run it, do the following:
+```
+$ npm install
+$ npm start
+```
+The file visualized can be found in `src/panvis/data.csv`. It can be exchanged to visualize differend developments of the virus.
