@@ -13,6 +13,8 @@ $ cd wirvsvirus
 
 ## Backend (PANdemic SIMulation)
 
+Author: Franz Miltz
+
 The recommended backend was written in Rust.
 
 You can find it in `src/pansim`. To run it, do the following:
