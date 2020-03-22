@@ -13,9 +13,9 @@ $ python src/pansim/pansim
 
 You can find some example outputs in the `data` directory.
 
-There are still many things to do:
-- Reimplement in more efficient language
-- Implement various groups and group sizes (Household, Families, Neighbourhoods, Cities, ...)
-- Use concurrency
-- Implement behaviour changes
-- ...
+There are still many things to implement:
+- cross-city transfers
+- behaviour changes
+- quarantine
+- health service
+- apparent statistics
