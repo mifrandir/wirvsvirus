@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+   <title>Pandemic Simulation</title>
+   <link rel="stylesheet" href="styles.css">   
+</head>
+<body>   
+    <h1>Pandemic Simulation</h1>
+    <form>
+        <button type="submit">start simulation</button>
+        <div>
+        <input type="number" id="population">
+        </div>
+    </form>
+    <input type="button" onclick="simulate()"/>
+    <div>
+        <svg width="1500" height="500" id="line-chart"></svg>
+    </div>
+    <script>
+        const electron = require('electron');
+        const {ipcRenderer} = electron;
+
+        const form = document.querySelector('form');
+        form.addEventListener('submit', submitForm);
+
+        function submitForm(e){
+            e.preventDefault();
+            const population = document.querySelector('#population').value;
+            ipcRenderer.send('submit:start', population);
+        }
+    </script>
+</body>
+<script src = "simulate.js"></script>
+</html>

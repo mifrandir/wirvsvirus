@@ -1,0 +1,16 @@
+{
+  "name": "PanVis",
+  "version": "1.0.0",
+  "description": "Pandemic Visualization",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Richard Schiemenz",
+  "license": "MIT",
+  "dependencies": {
+    "d3": "^5.15.0",
+    "electron": "^8.1.1",
+    "jsdom": "^16.2.1"
+  }
+}
