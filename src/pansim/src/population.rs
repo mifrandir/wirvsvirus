@@ -33,9 +33,6 @@ enum InternalEvent {
 const THREAD_NUMBER: u8 = 7;
 
 impl Society {
-    pub fn to_string(&self) -> String {
-        format!("{} {} {}", self.infections, self.deaths, self.recoveries)
-    }
     pub fn new(cfg: Config) -> Self {
         // TODO: Refactor.
         let begin = time::Instant::now();
@@ -111,6 +108,7 @@ impl Society {
     }
     pub fn next_day(&mut self) {
         self.calculate_internal_change();
+        self.calculate_national_infections();
     }
 
     fn calculate_internal_change(&mut self) {
@@ -120,15 +118,54 @@ impl Society {
             let c = Arc::clone(c);
             let sx = sx.clone();
             handles.push(thread::spawn(move || {
-                {
-                    let mut lock = (*c).lock().unwrap();
-                    (*lock).next_day(Some(&sx));
-                }
-                {
-                    let mut lock = (*c).lock().unwrap();
-                    (*lock).calculate_infections(Some(&sx));
-                }
+                let mut lock = (*c).lock().unwrap();
+                (*lock).next_day(Some(&sx));
+                (*lock).calculate_infections(Some(&sx));
             }));
+        }
+        drop(sx);
+        self.handle_events(rx);
+    }
+
+    fn calculate_national_infections(&mut self) {
+        let mut per_city = Vec::new();
+        for c in self.cities.iter() {
+            let city = (*c).lock().unwrap();
+            per_city.push((*city).get_national_mobile());
+        }
+        let mut all_con_c = Vec::new();
+        for (i, ps) in per_city.iter().enumerate() {
+            let mut con_c = 0;
+            let city = self.cities[i].lock().unwrap();
+            for p in ps {
+                if (*city).people[*p].is_contagious(&self.config) {
+                    con_c += 1;
+                }
+            }
+            all_con_c.push(con_c);
+        }
+        let mut rev_con_c = vec![0; all_con_c.len()];
+        for (i, con_c) in all_con_c.iter().enumerate() {
+            for j in 0..rev_con_c.len() {
+                if j != i {
+                    rev_con_c[j] += con_c;
+                }
+            }
+        }
+        let mut rng = rand::thread_rng();
+        let (sx, rx) = mpsc::channel();
+        let total = per_city.iter().map(|x| x.len()).sum::<usize>() as f32;
+        for (i, c) in self.cities.iter().enumerate() {
+            let (ev_s, ev_r) = mpsc::channel();
+            let mut city = (*c).lock().unwrap();
+            let p = rev_con_c[i] as f32 / (total - per_city[i].len() as f32);
+            for j in 0..per_city[i].len() {
+                if rng.gen::<f32>() < p {
+                    ev_s.send(InternalEvent::Infection(per_city[i][j])).unwrap();
+                }
+            }
+            drop(ev_s);
+            (*city).handle_internal_events(ev_r, Some(&sx));
         }
         drop(sx);
         self.handle_events(rx);
@@ -143,10 +180,23 @@ impl Society {
             }
         }
     }
+    pub fn to_string(&self) -> String {
+        format!(
+            "{},{},{},{}",
+            self.infections,
+            self.deaths,
+            self.recoveries,
+            self.infections - self.deaths - self.recoveries,
+        )
+    }
+    pub fn csv_header(&self) -> String {
+        format!("Infections,Deaths,Recoveries,Active")
+    }
 }
 
 #[derive(Debug)]
 pub struct City {
+    infections: u32,
     people: Vec<Person>,
     people_relations: HashMap<(u32, u32), u8>,
     district_relations: Vec<Vec<u8>>,
@@ -210,12 +260,24 @@ impl City {
         }
         eprintln!("Built city in {}s", begin.elapsed().as_secs_f64());
         City {
+            infections: 0,
             people: people,
             people_relations: people_relations,
             district_relations: district_relations,
             household_relations: household_relations,
             config: cfg,
         }
+    }
+
+    fn get_national_mobile(&self) -> Vec<usize> {
+        let mut rng = rand::thread_rng();
+        let mut mobile = Vec::new();
+        for i in 0..self.people.len() {
+            if rng.gen::<f32>() < self.config.population.mean_national_mobility {
+                mobile.push(i);
+            }
+        }
+        mobile
     }
 
     fn infect(&mut self, a: u32) {
@@ -225,13 +287,11 @@ impl City {
         self.people[a as usize].infect(&*self.config, None);
     }
 
-    fn calculate_infections(&mut self, sx: Option<&mpsc::Sender<Event>>) {
-        // We're using such a channel in case we want to make this concurrent later on.
-        let (ev_s, ev_r) = mpsc::channel();
-        self.calculate_household_infections(&ev_s);
-        self.calculate_district_infections(&ev_s);
-        self.calculate_city_infections(&ev_s);
-        drop(ev_s);
+    fn handle_internal_events(
+        &mut self,
+        ev_r: mpsc::Receiver<InternalEvent>,
+        sx: Option<&mpsc::Sender<Event>>,
+    ) {
         for e in ev_r {
             match e {
                 InternalEvent::Encounter(a, b) => self.handle_encounter(a, b, sx),
@@ -240,8 +300,23 @@ impl City {
         }
     }
 
+    fn calculate_infections(&mut self, sx: Option<&mpsc::Sender<Event>>) {
+        // We're using such a channel in case we want to make this concurrent later on.
+        let (ev_s, ev_r) = mpsc::channel();
+        self.calculate_household_infections(&ev_s);
+        self.calculate_district_infections(&ev_s);
+        self.calculate_city_infections(&ev_s);
+        drop(ev_s);
+        self.handle_internal_events(ev_r, sx);
+    }
+
     fn handle_infection(&mut self, a: usize, sx: Option<&mpsc::Sender<Event>>) {
-        self.people[a].infect(&self.config, sx);
+        if self.people[a].infect(&self.config, sx) {
+            if self.infections == 0 {
+                eprintln!("First infected in new city");
+            }
+            self.infections += 1;
+        }
     }
 
     fn handle_encounter(&mut self, a: usize, b: usize, sx: Option<&mpsc::Sender<Event>>) {
@@ -257,8 +332,8 @@ impl City {
         if r < res {
             // In households we're doing 1:1 infections.
             // This is unlike the model in the bigger partitions where we're using pools.
-            self.people[a].infect(&*self.config, sx);
-            self.people[b].infect(&*self.config, sx);
+            self.handle_infection(a, sx);
+            self.handle_infection(b, sx);
         }
     }
     fn calculate_household_infections(&mut self, ev_q: &mpsc::Sender<InternalEvent>) {
@@ -325,23 +400,30 @@ impl City {
     fn calculate_city_infections(&mut self, ev_q: &mpsc::Sender<InternalEvent>) {
         let mut rng = rand::thread_rng();
         let c_size = self.config.population.city_size as usize;
-        let mut total_mobile = 1;
-        let mut cotnagious_mobile = 1;
-        let mut uncontagious_mobile = Vec::new();
+        let mut total_mobile = Vec::new();
         for i in 0..c_size {
             if self.config.population.mean_city_mobility <= rng.gen() {
                 continue;
             }
-            total_mobile += 1;
-            if self.people[i].is_contagious(&*self.config) {
-                cotnagious_mobile += 1;
-            } else {
-                uncontagious_mobile.push(i);
-            }
+            total_mobile.push(i);
         }
-        let p = cotnagious_mobile as f32 / total_mobile as f32;
-        for i in uncontagious_mobile.iter() {
-            if p <= rng.gen() {
+        for i in total_mobile.iter() {
+            let d_size = self.config.population.district_size as usize;
+            let d = *i / d_size;
+            let foreign_mobile: Vec<usize> = total_mobile
+                .iter()
+                .map(|x| *x)
+                .filter(|x| d != *x / d_size)
+                .collect();
+            let total = foreign_mobile.len();
+            let mut con_c = 0;
+            for x in foreign_mobile {
+                if self.people[x].is_contagious(&self.config) {
+                    con_c += 1;
+                }
+            }
+            let p = con_c as f32 / total as f32;
+            if p < rng.gen() {
                 continue;
             }
             ev_q.send(InternalEvent::Infection(*i)).unwrap();
@@ -414,12 +496,12 @@ impl Person {
         self.doomed = true;
     }
 
-    fn infect(&mut self, cfg: &Config, sx: Option<&mpsc::Sender<Event>>) {
+    fn infect(&mut self, cfg: &Config, sx: Option<&mpsc::Sender<Event>>) -> bool {
         if self.infected {
-            return;
+            return false;
         }
         if rand::random::<f32>() >= cfg.virus.contagiousness {
-            return;
+            return false;
         }
         if let Some(s) = sx {
             s.send(Event::Infection).unwrap();
@@ -430,6 +512,7 @@ impl Person {
         if r < cfg.virus.lethality[self.age as usize] {
             self.doom();
         }
+        return true;
     }
 
     pub fn next_day(&mut self, cfg: &Config, sx: Option<&mpsc::Sender<Event>>) {

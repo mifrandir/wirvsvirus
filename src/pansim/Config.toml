@@ -1,15 +1,15 @@
-time_step = 1.0
+save_to_file = true
 
 [population]
-size = 20000
+size = 200000
 age_distribution = [0.08, 0.09, 0.1, 0.1, 0.13, 0.2, 0.1, 0.1, 0.08, 0.02]
 household_size = 10
-district_size = 50
+district_size = 2000
 city_size = 20000
 mean_household_mobility = 0.2 # Mean probability of an infectious encounter with a member of the same household
-mean_district_mobility = 0.001 # Mean probability of an infectious encounter with a member of the same district, but not the same household
-mean_city_mobility = 0.001 # Mean probability of an infectious encounter with a member of the same city, but not the same district
-mean_national_mobility = 0.01 # Mean probability of an infectious encounter with a memeber of the same society, but not the same city
+mean_district_mobility = 0.01 # Mean probability of an infectious encounter with a member of the same district, but not the same household
+mean_city_mobility = 0.005 # Mean probability of an infectious encounter with a member of the same city, but not the same district
+mean_national_mobility = 0.002 # Mean probability of an infectious encounter with a memeber of the same society, but not the same city
 city_medical_capacity = 1000
 
 # The probabilities may be influenced by isolation, hygiene, ...

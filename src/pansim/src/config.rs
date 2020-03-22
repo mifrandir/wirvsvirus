@@ -5,7 +5,7 @@ use toml;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    pub time_step: f64,
+    pub save_to_file: bool,
     pub population: Population,
     pub virus: Virus,
 }
@@ -54,7 +54,6 @@ mod tests {
     #[test]
     fn parse_example_config() -> Result<(), Box<dyn Error>> {
         let cfg = Config::parse("Config.toml")?;
-        assert_eq!(cfg.time_step, 1.0);
         assert_eq!(cfg.population.size, 10000);
         assert_eq!(
             cfg.virus.lethality,
