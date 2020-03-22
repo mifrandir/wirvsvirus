@@ -12,7 +12,7 @@ use std::time;
 pub struct Society {
     config: Arc<Config>,
     cities: Vec<Arc<Mutex<City>>>,
-    city_relations: Vec<Vec<u8>>,
+    //city_relations: Vec<Vec<u8>>,
     deaths: u32,
     recoveries: u32,
     infections: u32,
@@ -71,34 +71,35 @@ impl Society {
         for c in it.into_iter() {
             cities_unlocked.push(Arc::new(c));
         }
-        let begin2 = time::Instant::now();
-        let mut city_relations = Vec::new();
-        for _ in 0..city_no {
-            city_relations.push(vec![0; city_no as usize]);
-        }
-        eprintln!(
-            "Built city relations placeholder in {}s",
-            begin2.elapsed().as_secs_f32()
-        );
-        let begin2 = time::Instant::now();
-        let mut rng = rand::thread_rng();
-        for i in 1..city_no {
-            for j in 0..i {
-                let r: u8 = rng.gen();
-                city_relations[i][j] = r;
-                city_relations[j][i] = r;
-            }
-        }
-        eprintln!(
-            "Built city relations in {}s",
-            begin2.elapsed().as_secs_f32()
-        );
+        // TODO: Reintroduce city relations.
+        //let begin2 = time::Instant::now();
+        //let mut city_relations = Vec::new();
+        //for _ in 0..city_no {
+        //    city_relations.push(vec![0; city_no as usize]);
+        //}
+        //eprintln!(
+        //    "Built city relations placeholder in {}s",
+        //    begin2.elapsed().as_secs_f32()
+        //);
+        //let begin2 = time::Instant::now();
+        //let mut rng = rand::thread_rng();
+        //for i in 1..city_no {
+        //    for j in 0..i {
+        //        let r: u8 = rng.gen();
+        //        city_relations[i][j] = r;
+        //        city_relations[j][i] = r;
+        //    }
+        //}
+        //eprintln!(
+        //    "Built city relations in {}s",
+        //    begin2.elapsed().as_secs_f32()
+        //);
         eprintln!("Built society in {}s", begin.elapsed().as_secs_f32());
         Society {
             new_infections: 0,
             config: cfg,
             cities: cities_unlocked,
-            city_relations: city_relations,
+            //city_relations: city_relations,
             deaths: 0,
             infections: 0,
             recoveries: 0,
@@ -124,8 +125,8 @@ impl Society {
             handles.push(thread::spawn(move || {
                 let mut lock = (*c).lock().unwrap();
                 (*lock).next_day(Some(&sx));
-                (*lock).update_hosptials(Some(&sx));
                 (*lock).calculate_infections(Some(&sx));
+                (*lock).update_hosptials(Some(&sx));
             }));
         }
         drop(sx);

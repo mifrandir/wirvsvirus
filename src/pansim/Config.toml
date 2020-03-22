@@ -9,8 +9,8 @@ city_size = 2000000
 mean_household_mobility = 0.4 # Mean probability of an infectious encounter with a member of the same household
 mean_district_mobility = 0.01 # Mean probability of an infectious encounter with a member of the same district, but not the same household
 mean_city_mobility = 0.005 # Mean probability of an infectious encounter with a member of the same city, but not the same district
-mean_national_mobility = 0.002 # Mean probability of an infectious encounter with a memeber of the same society, but not the same city
-city_medical_capacity = 1000
+mean_national_mobility = 0.02 # Mean probability of an infectious encounter with a memeber of the same society, but not the same city
+city_medical_capacity = 10000
 
 # The probabilities may be influenced by isolation, hygiene, ...
 [virus]

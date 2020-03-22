@@ -8,20 +8,24 @@ The recommended backend was written in Rust.
 You can find it in `src/pansim`. To run it, do the following:
 ```
 $ cd src/pansim
-$ cargo run Config.toml
+$ cargo run --release Config.toml
 ```
+
+Or alternatively, you can run
+```
+$ cd src/pansim
+$ cargo build --release
+```
+
+and then use 
+```
+target/pansim Config.toml
+```
+to run it so you don't have the compiler overhead.
 
 You can change the settings in `src/pansim/Config.toml` to your liking.
 
-You can find the python backend in `src/simulation`.
-
-How do I use it? For now, just run
-
-```
-$ python src/pansim-py/pansim
-```
-
-You can find some example outputs in the `data` directory.
+If `save_to_file` is set to `true`, the program will also create an output file in `pansim_out`. The file is named with a time stamp, so the newest should be the last, alphabetically.
 
 There are still many things to implement:
 - cross-city transfers
