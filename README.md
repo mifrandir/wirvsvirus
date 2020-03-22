@@ -11,7 +11,7 @@ To follow the rest of the instructions `cd` into the directory:
 $ cd wirvsvirus
 ```
 
-## Strcutre
+## Structre
 
 This project include two parts.
 
@@ -21,31 +21,27 @@ This project include two parts.
 
 ## Backend (PANdemic SIMulation)
 
-Author: Franz Miltz
+**Author: Franz Miltz**
 
-The recommended backend was written in Rust.
+The recommended backend was written in Rust. You can find it in `src/pansim`. 
 
-You can find it in `src/pansim`. To run it, do the following:
+### Dependencies 
+
+- Rust
+- Python (Pandas)
+
+### Usage
+
+To run the simulation, do the following:
 ```
 $ cd src/pansim
 $ cargo run --release Config.toml
 ```
 
-Or alternatively, you can run
-```
-$ cd src/pansim
-$ cargo build --release
-```
+Or alternatively, you can use the `run.sh` script to run the project and generate visualizations that may then be founnd in the `output/` folder, next to the `.csv`-file. All the output files are named with a time stamp.
 
-and then use 
-```
-target/pansim Config.toml
-```
-to run it so you don't have the compiler overhead.
+You can change the settings in `src/pansim/Config.toml` to your liking but all settings must be included.
 
-You can change the settings in `src/pansim/Config.toml` to your liking.
-
-If `save_to_file` is set to `true`, the program will also create an output file in `pansim_out`. The file is named with a time stamp, so the newest should be the last, alphabetically.
 
 ### Features
 
