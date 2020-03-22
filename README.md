@@ -69,7 +69,7 @@ You can change the settings in `src/pansim/Config.toml` to your liking but all s
 
 ## Frontend (PANdemic VISualization)
 
-Author: Richard Schiemenz
+**Author: Richard Schiemenz**
 
 The frontend was written in Javascript using Electron.
 
