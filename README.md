@@ -11,6 +11,14 @@ To follow the rest of the instructions `cd` into the directory:
 $ cd wirvsvirus
 ```
 
+## Strcutre
+
+This project include two parts.
+
+1. PANSIM - A simulation that provides data on a theoretical development of a pandemic.
+2. PANVIS - A visualizer for the data on the development of a pandamic.
+
+
 ## Backend (PANdemic SIMulation)
 
 Author: Franz Miltz
