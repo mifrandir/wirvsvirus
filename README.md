@@ -29,13 +29,18 @@ The recommended backend was written in Rust. You can find it in `src/pansim`.
 
 Here you can see three different scenarios. You can find more details in `demo/`.
 
-1. Fast spread:
+Fast spread: 
+
 ![A fast spreading pandemic](demo/fast.png)
 
-2. Slow spread:
+
+Slow spread: 
+
 ![A slow spreading pandemic](demo/slow.png)
 
-3. Unsustained pandemic:
+
+Unsustained pandemic: 
+
 ![An unsustained pandemic](demo/unsustained.png)
 
 Keep an eye on the value on the axis. 
