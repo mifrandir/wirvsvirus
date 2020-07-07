@@ -10,7 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "d3": "^5.15.0",
-    "electron": "^8.1.1",
+    "electron": "^8.2.4",
     "jsdom": "^16.2.1"
   }
 }
